@@ -1,18 +1,29 @@
 
 package info.guardianproject.trustedintents.example;
 
-import android.support.v7.app.ActionBarActivity;
-import android.support.v7.app.ActionBar;
-import android.support.v4.app.Fragment;
+import android.app.Activity;
+import android.content.ActivityNotFoundException;
+import android.content.Intent;
 import android.os.Bundle;
+import android.support.v4.app.Fragment;
+import android.support.v7.app.ActionBarActivity;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.View.OnClickListener;
 import android.view.ViewGroup;
-import android.os.Build;
+import android.widget.Button;
+import android.widget.Toast;
+
+import info.guardianproject.GuardianProjectRSA1024;
+import info.guardianproject.trustedintents.TrustedIntents;
+
+import java.security.cert.CertificateException;
 
 public class MainActivity extends ActionBarActivity {
+
+    private static TrustedIntents trustedIntents;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -24,6 +35,9 @@ public class MainActivity extends ActionBarActivity {
                     .add(R.id.container, new PlaceholderFragment())
                     .commit();
         }
+
+        trustedIntents = TrustedIntents.get(this);
+        trustedIntents.addTrustedSigner(new GuardianProjectRSA1024());
     }
 
     @Override
@@ -59,6 +73,31 @@ public class MainActivity extends ActionBarActivity {
                 Bundle savedInstanceState) {
             View rootView = inflater.inflate(R.layout.fragment_main, container, false);
             return rootView;
+        }
+
+        @Override
+        public void onActivityCreated(Bundle savedInstanceState) {
+            super.onActivityCreated(savedInstanceState);
+            final Activity activity = getActivity();
+            Button sendSecretsToGPG = (Button) activity.findViewById(R.id.send_secrets_to_gpg);
+            sendSecretsToGPG.setOnClickListener(new OnClickListener() {
+
+                @Override
+                public void onClick(View v) {
+                    try {
+                        Intent intent = new Intent(Intent.ACTION_VIEW);
+                        intent.setClassName("info.guardianproject.gpg",
+                                "info.guardianproject.gpg.MainActivity");
+                        trustedIntents.startActivity(activity, intent);
+                    } catch (ActivityNotFoundException e) {
+                        e.printStackTrace();
+                        Toast.makeText(activity, e.getLocalizedMessage(), Toast.LENGTH_LONG).show();
+                    } catch (CertificateException e) {
+                        e.printStackTrace();
+                        Toast.makeText(activity, e.getLocalizedMessage(), Toast.LENGTH_LONG).show();
+                    }
+                }
+            });
         }
     }
 
